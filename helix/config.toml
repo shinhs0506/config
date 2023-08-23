@@ -1,0 +1,23 @@
+theme = "onedark"
+
+[editor]
+true-color = true
+line-number = "relative"
+cursorline = true
+auto-format = false
+auto-completion = false
+bufferline = "multiple"
+
+[editor.cursor-shape]
+insert = "bar"
+normal = "block"
+select = "block"
+
+[editor.indent-guides]
+render = true
+
+[editor.statusline]
+left = ["mode", "spinner", "file-name", "version-control"]
+
+[editor.lsp]
+display-inlay-hints = true

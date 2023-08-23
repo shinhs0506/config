@@ -1,0 +1,216 @@
+#+TITLE Emacs Config
+
+* Table Of Contents :toc:
+- [[#package-manager][Package Manager]]
+- [[#general-configuration][General Configuration]]
+  - [[#ui][UI]]
+  - [[#scroll][Scroll]]
+  - [[#images][Images]]
+  - [[#color-scheme][Color Scheme]]
+  - [[#mode-line][Mode Line]]
+- [[#evil][Evil]]
+- [[#languages][Languages]]
+- [[#lsp][LSP]]
+- [[#ivy][Ivy]]
+- [[#git][Git]]
+- [[#terminal][Terminal]]
+- [[#keybindings][Keybindings]]
+- [[#org-mode][Org Mode]]
+  - [[#table-of-content][Table of Content]]
+  - [[#bullet][Bullet]]
+
+* Package Manager
+straight package manager
+#+begin_src emacs-lisp
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+         (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+        (bootstrap-version 6))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+          (url-retrieve-synchronously
+           "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+           'silent 'inhibit-cookies)
+        (goto-char (point-max))
+        (eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage))
+  (setq straight-use-package-by-default t)
+  (straight-use-package 'use-package)
+
+  (require 'package)
+  (add-to-list 'package-archives
+               '("melpa" . "https://melpa.org/packages/") t)
+  (package-initialize)
+  (package-refresh-contents)
+#+end_src
+
+* General Configuration
+** UI
+basic UI setup/clean up
+#+begin_src emacs-lisp
+  (set-face-attribute 'default nil :font "JetBrains Mono" :weight 'medium :height 130)
+
+  (global-display-line-numbers-mode)
+  (setq display-line-numbers-type 'relative)
+
+  (global-hl-line-mode)
+
+  (setq inhibit-startup-message t) 
+  (setq initial-scratch-message nil)
+
+  (scroll-bar-mode -1)
+  (tool-bar-mode -1)
+  (menu-bar-mode -1)
+
+  (add-hook 'emacs-startup-hook 'toggle-frame-maximized)   (tooltip-mode -1)
+#+end_src
+
+** Scroll
+smooth scroll
+#+begin_src emacs-lisp
+(setq scroll-conservatively 101)
+(setq scroll-margin 20)
+(pixel-scroll-precision-mode)
+#+end_src
+
+** Images
+#+begin_src emacs-lisp
+(add-to-list 'image-types 'svg)
+#+end_src
+
+** Color Scheme
+#+begin_src emacs-lisp
+(use-package doom-themes
+  :ensure t
+  :config
+  (setq doom-themes-enable-bold t
+        doom-themes-enable-italic t)
+  (load-theme 'doom-one t)
+
+  (doom-themes-visual-bell-config)
+  (setq doom-themes-treemacs-theme "doom-atom")
+  (doom-themes-treemacs-config)
+  (doom-themes-org-config))
+#+end_src
+
+** Mode Line
+#+begin_src emacs-lisp
+    (use-package doom-modeline
+      :ensure t
+      :init (doom-modeline-mode 1))
+    (use-package nerd-icons)
+    (use-package all-the-icons)
+#+end_src
+
+
+* Evil
+vim-like keybindings
+#+begin_src emacs-lisp
+(use-package evil
+  :init
+  (setq evil-want-keybinding nil)
+	:config
+	(evil-mode t))
+(use-package evil-collection
+  :after evil
+  :config
+  (evil-collection-init))
+#+end_src
+
+* Languages
+#+begin_src emacs-lisp
+  (use-package rust-mode)
+#+end_src
+
+* LSP
+#+begin_src emacs-lisp
+  (use-package lsp-mode
+    :init
+    (setq lsp-keymap-prefix "C-c l")
+    :hook (
+           (rust-mode . lsp)
+           ;; if you want which-key integration
+           (lsp-mode . lsp-enable-which-key-integration))
+    :commands lsp)
+
+  (use-package flycheck)
+  (use-package lsp-ui
+    :commands lsp-ui-mode
+    :config (lsp-ui-mode))
+  (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
+  (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+  (use-package dap-mode)
+
+  (use-package which-key
+      :config
+      (which-key-mode))
+#+end_src
+
+* Ivy
+#+begin_src emacs-lisp
+    (use-package ivy
+      :config
+  (ivy-mode))
+#+end_src
+
+* Git
+#+begin_src emacs-lisp
+(use-package magit)
+#+end_src
+
+* Terminal
+#+begin_src emacs-lisp
+(use-package vterm
+  :ensure t)
+#+end_src
+
+* Keybindings
+#+begin_src emacs-lisp
+  (use-package which-key
+    :config
+    (which-key-mode))
+
+  (use-package general
+    :after evil
+    :config
+    (general-create-definer efs/leader-keys
+      :keymaps '(normal insert visual emacs)
+      :prefix "SPC"
+      :global-prefix "C-SPC")
+
+    (efs/leader-keys
+      "b" '(:ignore t :which-key "buffer")
+      "bn" '(next-buffer :which-key "next buffer")
+      "bp" '(previous-buffer :which-key "previous buffer")
+      "c" '(:ignore t :which-key "config")
+      "co" '((lambda () (interactive) (find-file "~/.config/emacs/config.org")) :which-key "next buffer")
+      "cl" '((lambda () (interactive) (load-file "~/.config/emacs/init.el")) :which-key "previous buffer")
+      "e" '(:ignore t :which-key "explore")
+      "et" '(treemacs :which-key "toggle")
+      "f" '(:ignore t :which-key "find")
+      "ff" '(project-find-file :which-key "find file")
+      "fl" '(projectile-ripgrep :which-key "find file")
+      "l" '(:ignore t :which-key "lsp")
+      "ld" '(lsp-ui-peek-find-definition :which-key "go to definition")
+      "lr" '(lsp-ui-peek-find-references :which-key "go to references")
+      "lh" '(lsp-describe-thing-at-point :which-key "hover")
+      "lb" '(lsp-ui-imenu :which-key "buffer symbols")
+      "ls" '(lsp-ui-find-workspace-symbols :which-key "global symbols")))
+  #+end_src
+
+* Org Mode
+** Table of Content
+#+begin_src emacs-lisp
+  (use-package toc-org
+    :commands toc-org-enable
+    :init (add-hook 'org-mode-hook 'toc-org-enable))
+#+end_src
+
+** Bullet
+#+begin_src emacs-lisp
+  (add-hook 'org-mode-hook 'org-indent-mode)
+  (use-package org-bullets
+  :config
+  (add-hook 'org-mode-hook (lambda() (org-bullets-mode 1))))
+#+end_src
+
