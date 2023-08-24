@@ -11,6 +11,7 @@
 - [[#evil][Evil]]
 - [[#languages][Languages]]
 - [[#lsp][LSP]]
+- [[#projectile][Projectile]]
 - [[#ivy][Ivy]]
 - [[#git][Git]]
 - [[#terminal][Terminal]]
@@ -144,6 +145,13 @@ vim-like keybindings
   (use-package which-key
       :config
       (which-key-mode))
+#+end_src
+
+* Projectile
+#+begin_src emacs-lisp
+  (use-package projectile
+    :init
+    (setq projectile-project-search-path '("~/Programs/" "~/.config/")))
 #+end_src
 
 * Ivy
