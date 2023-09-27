@@ -1,13 +1,19 @@
-#+TITLE Emacs Config
+#+TITLE: Emacs Config
 
 * Table Of Contents :toc:
-- [[#package-manager][Package Manager]]
+- [[#org-mode][Org Mode]]
+  - [[#org-roam][Org-roam]]
+  - [[#table-of-content][Table of Content]]
+  - [[#bullet][Bullet]]
 - [[#general-configuration][General Configuration]]
   - [[#ui][UI]]
   - [[#scroll][Scroll]]
   - [[#images][Images]]
   - [[#color-scheme][Color Scheme]]
   - [[#mode-line][Mode Line]]
+  - [[#pair-mode][Pair mode]]
+  - [[#eldoc][Eldoc]]
+  - [[#wsl][WSL]]
 - [[#evil][Evil]]
 - [[#languages][Languages]]
 - [[#lsp][LSP]]
@@ -16,34 +22,34 @@
 - [[#git][Git]]
 - [[#terminal][Terminal]]
 - [[#keybindings][Keybindings]]
-- [[#org-mode][Org Mode]]
-  - [[#table-of-content][Table of Content]]
-  - [[#bullet][Bullet]]
 
-* Package Manager
-straight package manager
+* Org Mode
+** Org-roam
 #+begin_src emacs-lisp
-  (defvar bootstrap-version)
-  (let ((bootstrap-file
-         (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-        (bootstrap-version 6))
-    (unless (file-exists-p bootstrap-file)
-      (with-current-buffer
-          (url-retrieve-synchronously
-           "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
-           'silent 'inhibit-cookies)
-        (goto-char (point-max))
-        (eval-print-last-sexp)))
-    (load bootstrap-file nil 'nomessage))
-  (setq straight-use-package-by-default t)
-  (straight-use-package 'use-package)
+(use-package org-roam
+  :ensure t
+  :custom
+  (org-roam-directory "~/Documents/org-roam")
+  :config
+  (org-roam-db-autosync-mode))
 
-  (require 'package)
-  (add-to-list 'package-archives
-               '("melpa" . "https://melpa.org/packages/") t)
-  (package-initialize)
-  (package-refresh-contents)
 #+end_src
+
+** Table of Content
+#+begin_src emacs-lisp
+  (use-package toc-org
+    :commands toc-org-enable
+    :init (add-hook 'org-mode-hook 'toc-org-enable))
+#+end_src
+
+** Bullet
+#+begin_src emacs-lisp
+  (add-hook 'org-mode-hook 'org-indent-mode)
+  (use-package org-bullets
+  :config
+  (add-hook 'org-mode-hook (lambda() (org-bullets-mode 1))))
+#+end_src
+
 
 * General Configuration
 ** UI
@@ -103,62 +109,91 @@ smooth scroll
     (use-package all-the-icons)
 #+end_src
 
+** Pair mode
+#+begin_src emacs-lisp
+(electric-pair-mode)
+#+end_src
+
+** Eldoc
+#+begin_src emacs-lisp
+  (setq eldoc-echo-area-prefer-doc-buffer t)
+  (global-eldoc-mode -1)
+#+end_src
+
+** WSL
+#+begin_src emacs-lisp
+  (when (and (eq system-type 'gnu/linux)
+  	   (string-match "Linux.*Microsoft.*Linux"
+  			 (shell-command-to-string "uname -a")))
+    (setq
+     browse-url-generic-program "/mnt/c/Windows/System32/cmd.exe"
+     browse-url-generic-args '("/c" "start")
+     browse-url-browser-function #'browse-url-generic))
+#+end_src
 
 * Evil
 vim-like keybindings
 #+begin_src emacs-lisp
-(use-package evil
-  :init
-  (setq evil-want-keybinding nil)
-	:config
-	(evil-mode t))
-(use-package evil-collection
-  :after evil
-  :config
-  (evil-collection-init))
+  (use-package evil
+    :init
+    (setq evil-want-keybinding nil)
+          :config
+          (evil-mode t))
+  (use-package evil-collection
+    :after evil
+    :config
+    (evil-collection-init))
+  (evil-ex-define-cmd "quit" 'evil-quit)
+  (evil-ex-define-cmd "q" 'kill-this-buffer)
+  (evil-ex-define-cmd "wq" 'evil-save-modified-and-close)
+  (defun save-and-kill-this-buffer()(interactive)(save-buffer)(kill-current-buffer))
 #+end_src
 
 * Languages
 #+begin_src emacs-lisp
   (use-package rust-mode)
+
+  (setq treesit-language-source-alist
+   '((c "https://github.com/tree-sitter/tree-sitter-c")
+     (rust "https://github.com/tree-sitter/tree-sitter-rust")
+     (cpp "https://github.com/tree-sitter/tree-sitter-cpp")))
 #+end_src
 
 * LSP
 #+begin_src emacs-lisp
-  (use-package lsp-mode
+  (use-package markdown-mode
+    :ensure t
+    :mode ("REAME\\.md\\'" . gfm-mode)
+    :init (setq markdown-command "multimarkdown"))
+  (use-package yasnippet
+    :init (yas-global-mode 1))
+  (use-package lsp-bridge
+    :straight '(lsp-bridge :type git :host github :repo "manateelazycat/lsp-bridge"
+              :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
+              :build (:not compile))
+    :config
+    (setq lsp-bridge-enable-hover-diagnostic t)
     :init
-    (setq lsp-keymap-prefix "C-c l")
-    :hook (
-           (rust-mode . lsp)
-           ;; if you want which-key integration
-           (lsp-mode . lsp-enable-which-key-integration))
-    :commands lsp)
-
-  (use-package flycheck)
-  (use-package lsp-ui
-    :commands lsp-ui-mode
-    :config (lsp-ui-mode))
-  (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-  (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
-  (use-package dap-mode)
-
-  (use-package which-key
-      :config
-      (which-key-mode))
+    (global-lsp-bridge-mode))
 #+end_src
 
 * Projectile
 #+begin_src emacs-lisp
   (use-package projectile
     :init
-    (setq projectile-project-search-path '("~/Programs/" "~/.config/")))
+    (setq projectile-project-search-path '("~/Programs/" "~/.config/"))
+    :config
+    (projectile-global-mode t))
 #+end_src
 
 * Ivy
 #+begin_src emacs-lisp
-    (use-package ivy
-      :config
-  (ivy-mode))
+  (use-package ivy
+    :init
+    (setq ivy-use-virtual-buffers t)
+    (setq ivy-recursive-minibuffers t)
+    :config
+    (ivy-mode))
 #+end_src
 
 * Git
@@ -174,51 +209,47 @@ vim-like keybindings
 
 * Keybindings
 #+begin_src emacs-lisp
-  (use-package which-key
-    :config
-    (which-key-mode))
+    (use-package which-key
+      :config
+      (which-key-mode))
 
-  (use-package general
-    :after evil
-    :config
-    (general-create-definer efs/leader-keys
-      :keymaps '(normal insert visual emacs)
-      :prefix "SPC"
-      :global-prefix "C-SPC")
+    (use-package general
+      :after evil
+      :config
+      (general-create-definer efs/leader-keys
+        :keymaps '(normal insert visual emacs)
+        :prefix "SPC"
+        :global-prefix "C-SPC")
 
-    (efs/leader-keys
-      "b" '(:ignore t :which-key "buffer")
-      "bn" '(next-buffer :which-key "next buffer")
-      "bp" '(previous-buffer :which-key "previous buffer")
-      "c" '(:ignore t :which-key "config")
-      "co" '((lambda () (interactive) (find-file "~/.config/emacs/config.org")) :which-key "next buffer")
-      "cl" '((lambda () (interactive) (load-file "~/.config/emacs/init.el")) :which-key "previous buffer")
-      "e" '(:ignore t :which-key "explore")
-      "et" '(treemacs :which-key "toggle")
-      "f" '(:ignore t :which-key "find")
-      "ff" '(project-find-file :which-key "find file")
-      "fl" '(projectile-ripgrep :which-key "find file")
-      "l" '(:ignore t :which-key "lsp")
-      "ld" '(lsp-ui-peek-find-definition :which-key "go to definition")
-      "lr" '(lsp-ui-peek-find-references :which-key "go to references")
-      "lh" '(lsp-describe-thing-at-point :which-key "hover")
-      "lb" '(lsp-ui-imenu :which-key "buffer symbols")
-      "ls" '(lsp-ui-find-workspace-symbols :which-key "global symbols")))
+      (efs/leader-keys
+        "b" '(:ignore t :which-key "buffer")
+        "bn" '(next-buffer :which-key "next buffer")
+        "bp" '(previous-buffer :which-key "previous buffer")
+        "c" '(:ignore t :which-key "config")
+        "co" '((lambda () (interactive) (find-file "~/.config/emacs/config.org")) :which-key "open config")
+        "cl" '((lambda () (interactive) (load-file "~/.config/emacs/init.el")) :which-key "load config")
+        "e" '(:ignore t :which-key "explore")
+        "et" '(treemacs :which-key "toggle")
+        "f" '(:ignore t :which-key "find")
+        "ff" '(project-find-file :which-key "find file")
+        "fb" '(project-list-buffer :which-key "find buffer")
+        "fl" '(projectile-ripgrep :which-key "ripgrep")
+        "l" '(:ignore t :which-key "lsp")
+        "ld" '(lsp-bridge-find-def :which-key "go to definition")
+        "lr" '(lsp-bridge-find-references :which-key "go to references")
+        "lh" '(lsp-bridge-popup-documentation :which-key "hover")
+        "lb" '(lsp-treemacs-symbols :which-key "buffer symbols")
+        "o" '(:ignore t :which-key "org")
+        "of" '(org-roam-node-find)
+        "oi" '(org-roam-node-insert)
+        "p" '(:ignore t :which-key "project")
+        "ps" '(projectile-switch-project :which-key "switch projec")))
+
+    (with-eval-after-load 'lsp-bridge 
+        (evil-define-key 'insert acm-mode-map (kbd "C-n") #'acm-select-next)
+        (evil-define-key 'insert acm-mode-map (kbd "C-p") #'acm-select-prev)
+        (evil-define-key 'insert acm-mode-map (kbd "C-u") #'acm-doc-scroll-down)
+        (evil-define-key 'insert acm-mode-map (kbd "C-d") #'acm-doc-scroll-up)
+        (add-hook 'acm-mode-hook #'evil-normalize-keymaps))
   #+end_src
-
-* Org Mode
-** Table of Content
-#+begin_src emacs-lisp
-  (use-package toc-org
-    :commands toc-org-enable
-    :init (add-hook 'org-mode-hook 'toc-org-enable))
-#+end_src
-
-** Bullet
-#+begin_src emacs-lisp
-  (add-hook 'org-mode-hook 'org-indent-mode)
-  (use-package org-bullets
-  :config
-  (add-hook 'org-mode-hook (lambda() (org-bullets-mode 1))))
-#+end_src
 
