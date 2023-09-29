@@ -161,20 +161,16 @@ vim-like keybindings
 
 * LSP
 #+begin_src emacs-lisp
-  (use-package markdown-mode
-    :ensure t
-    :mode ("REAME\\.md\\'" . gfm-mode)
-    :init (setq markdown-command "multimarkdown"))
-  (use-package yasnippet
-    :init (yas-global-mode 1))
-  (use-package lsp-bridge
-    :straight '(lsp-bridge :type git :host github :repo "manateelazycat/lsp-bridge"
-              :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
-              :build (:not compile))
-    :config
-    (setq lsp-bridge-enable-hover-diagnostic t)
-    :init
-    (global-lsp-bridge-mode))
+  (use-package lsp-mode
+    :hook
+    ((rust-mode . lsp-deferred)
+    (cpp-mode . lsp-deferred)
+    (c-mode . lsp-deferred)
+    (lsp-mode . lsp-enable-which-key-integration))
+    :commands (lsp lsp-deferred))
+    
+  (use-package flycheck)
+  (use-package lsp-ui :commands lsp-ui-mode)
 #+end_src
 
 * Projectile
@@ -240,8 +236,8 @@ vim-like keybindings
         "lh" '(lsp-bridge-popup-documentation :which-key "hover")
         "lb" '(lsp-treemacs-symbols :which-key "buffer symbols")
         "o" '(:ignore t :which-key "org")
-        "of" '(org-roam-node-find)
-        "oi" '(org-roam-node-insert)
+        "of" '(org-roam-node-find :which-key "find node")
+        "oi" '(org-roam-node-insert :which-key "isert node")
         "p" '(:ignore t :which-key "project")
         "ps" '(projectile-switch-project :which-key "switch projec")))
 
