@@ -3,7 +3,7 @@
 local function setupFrontends()
   if vim.g.neovide then
     vim.g.neovide_refresh_rate = 140
-    vim.opt.guifont = { "JetBrains Mono", ":h12", ":b" }
+    vim.opt.guifont = { "JetBrains Mono", ":h12" }
     vim.g.neovide_cursor_animation_length = 0
   end
 end
@@ -81,27 +81,10 @@ local function setupPlugins()
       config = function()
         require('nvim-treesitter').setup {}
       end,
-    }, {
-    "https://git.sr.ht/~whynothugo/lsp_lines.nvim",
-    config = function()
-      require("lsp_lines").setup {}
-      vim.diagnostic.config({
-        virtual_text = false,
-        virtual_lines = {
-          only_current_line = true,
-          hightlight_whole_line = false,
-        }
-      })
-    end,
   }, {
     'nvim-telescope/telescope.nvim',
     tag = '0.1.1',
     requires = { 'nvim-lua/plenary.nvim' },
-  }, {
-    "ray-x/lsp_signature.nvim",
-    config = function()
-      require("lsp_signature").setup {}
-    end,
   }, {
     'windwp/nvim-autopairs',
     config = function()
@@ -169,13 +152,86 @@ local function setupPlugins()
   local function setupLSP()
     require('pckr').add {
       "neovim/nvim-lspconfig",
+      {
+        "https://git.sr.ht/~whynothugo/lsp_lines.nvim",
+        config = function()
+          require("lsp_lines").setup {}
+          vim.diagnostic.config({
+            virtual_text = false,
+            virtual_lines = {
+              only_current_line = true,
+              hightlight_whole_line = false,
+            }
+          })
+        end,
+      }, {
+        "simrat39/rust-tools.nvim"
+      }, {
+      "ray-x/lsp_signature.nvim",
+      config = function()
+        require("lsp_signature").setup {}
+      end,
+      }
     }
 
     local lspconfig = require('lspconfig')
     local servers = { 'rust_analyzer', 'clangd', 'zls', 'gopls', 'lua_ls' }
-    for _, server in ipairs(servers) do
-      lspconfig[server].setup {}
+
+    local attach_codelens_refresh = function(client, bufnr)
+      local status_ok, codelens_supported = pcall(function()
+        return client.supports_method "textDocument/codeLens"
+      end)
+      if not status_ok or not codelens_supported then
+        return
+      end
+      local group = "lsp_code_lens_refresh"
+      local cl_events = { "CursorHold", "CursorHoldI", "InsertLeave" }
+      local ok, cl_autocmds = pcall(vim.api.nvim_get_autocmds, {
+        group = group,
+        buffer = bufnr,
+        event = cl_events,
+      })
+
+      if ok and #cl_autocmds > 0 then
+        return
+      end
+      vim.api.nvim_create_augroup(group, { clear = false })
+      vim.api.nvim_create_autocmd(cl_events, {
+        group = group,
+        buffer = bufnr,
+        callback = vim.lsp.codelens.refresh,
+      })
+      print("Hello World")
     end
+
+    local on_attach = function(client, bufnr)
+      attach_codelens_refresh(client, bufnr)
+    end
+
+    require('rust-tools').setup {
+      server = {
+        on_attach = on_attach
+      }
+    }
+    lspconfig.clangd.setup{
+      on_attach = on_attach
+    }
+    lspconfig.zls.setup{
+      on_attach = on_attach
+    }
+    lspconfig.gopls.setup{
+      on_attach = on_attach
+    }
+    lspconfig.lua_ls.setup{
+      on_attach = on_attach,
+      settings = {
+        lua = {
+          diagnostics = {
+            globals = { 'vim' }
+          }
+        }
+      }
+    }
   end
   setupLSP()
 end
@@ -235,6 +291,7 @@ local function setupKeymaps()
       buf_map('<leader>lw', '<cmd>Telescope lsp_dynamic_workspace_symbols<cr>', '[w]orkspace symbol')
       buf_map('<leader>lb', '<cmd>Telescope lsp_document_symbols<cr>', '[b]uffer symbol')
       buf_map('<leader>lh', '<cmd>lua vim.lsp.buf.hover()<cr>', '[h]over')
+      buf_map('<leader>lc', '<cmd>lua vim.lsp.codelens.run()<cr>', '[c]odelens')
     end,
   })
 
