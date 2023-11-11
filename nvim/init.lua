@@ -96,7 +96,9 @@ local function setupPlugins()
     'lukas-reineke/indent-blankline.nvim',
     config = function()
       require('ibl').setup {
-        show_current_context = true,
+        scope = {
+          enabled = true
+        }
       }
     end,
   }, {
@@ -185,7 +187,7 @@ local function setupPlugins()
         return
       end
       local group = "lsp_code_lens_refresh"
-      local cl_events = { "CursorHold", "CursorHoldI", "InsertLeave" }
+      local cl_events = { "BufEnter", "CursorHold", "CursorHoldI", "InsertLeave" }
       local ok, cl_autocmds = pcall(vim.api.nvim_get_autocmds, {
         group = group,
         buffer = bufnr,
@@ -201,7 +203,6 @@ local function setupPlugins()
         buffer = bufnr,
         callback = vim.lsp.codelens.refresh,
       })
-      print("Hello World")
     end
 
     local on_attach = function(client, bufnr)
