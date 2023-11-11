@@ -12,6 +12,7 @@ local function setupOptions()
   -- leader key
   vim.g.mapleader = " "
 
+
   -- options
   local options = {
     backup = false,
